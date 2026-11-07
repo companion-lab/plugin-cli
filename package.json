@@ -1,0 +1,40 @@
+{
+  "name": "companion-cli",
+  "version": "0.1.0",
+  "description": "Scaffold, build, and package companion-tauri plugins (JS frontend + Rust backend) into an installable zip.",
+  "type": "module",
+  "license": "MIT",
+  "author": "companion-lab",
+  "bin": {
+    "companion-cli": "bin/companion-cli.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/companion-lab/plugin-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/companion-lab/plugin-cli/issues"
+  },
+  "homepage": "https://github.com/companion-lab/plugin-cli#readme",
+  "keywords": [
+    "companion",
+    "plugin",
+    "tauri",
+    "vrm",
+    "scaffold",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "fflate": "^0.8.2"
+  }
+}
