@@ -114,7 +114,11 @@ async function loadEsbuild() {
 }
 
 function defaultSdkDir() {
-  return path.join(repoRoot, "sdk", "js", "@companion", "plugin");
+  // Inside a companion-tauri checkout, build against the repo's live SDK;
+  // otherwise use the SDK shims bundled with this package (npm installs).
+  const checkoutSdk = path.join(repoRoot, "sdk", "js", "@companion", "plugin");
+  if (existsSync(path.join(checkoutSdk, "index.ts"))) return checkoutSdk;
+  return path.join(cliRoot, "sdk", "js", "@companion", "plugin");
 }
 
 async function runInit(rest, opts) {
