@@ -1,6 +1,6 @@
 {
   "name": "companion-cli",
-  "version": "0.1.2",
+  "version": "0.3.0",
   "description": "Scaffold, build, and package companion-tauri plugins (JS frontend + Rust backend) into an installable zip.",
   "type": "module",
   "license": "MIT",
