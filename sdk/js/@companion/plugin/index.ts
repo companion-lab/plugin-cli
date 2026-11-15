@@ -264,7 +264,9 @@ export type SttProvider = {
 };
 
 export type ServicesSurface = {
-  registerTts: (provider: TtsProvider) => void;
+  /** Publish the TTS provider. Registering null hands a previously taken
+   *  slot back to the provider underneath (takeover stack). */
+  registerTts: (provider: TtsProvider | null) => void;
   registerStt: (provider: SttProvider) => void;
   tts: () => TtsProvider;
   stt: () => SttProvider | null;
@@ -274,6 +276,50 @@ export type SecretsSurface = {
   set: (name: string, value: string) => Promise<void>;
   get: (name: string) => Promise<string | null>;
   remove: (name: string) => Promise<void>;
+};
+
+// ---------------------------------------------------------------------------
+// Window surface (requires the "window" manifest permission)
+// ---------------------------------------------------------------------------
+
+/** Position or size in logical (CSS) pixels. */
+export type LogicalPoint = { x: number; y: number };
+export type LogicalSizeLike = { width: number; height: number };
+
+/** Corner snap presets; `center` centers on the current monitor's work area. */
+export type WindowAnchor =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "center";
+
+/**
+ * Control of the companion (main) window. Every method routes to the main
+ * window even when called from the settings window. Changes are
+ * runtime-only: the user's General-tab preferences win at the next startup.
+ * Requires the `"window"` permission in manifest.json — without it every
+ * method throws.
+ */
+export type WindowSurface = {
+  /** Logical size of the companion window. */
+  getSize: () => Promise<LogicalSizeLike>;
+  /** Resize the companion window (logical px; clamped by its min size). */
+  setSize: (size: LogicalSizeLike) => Promise<void>;
+  /** Logical top-left of the companion window (global coordinates). */
+  getPosition: () => Promise<LogicalPoint>;
+  /** Move the companion window: absolute logical coordinates or a preset
+   *  anchor on the current monitor's work area. */
+  setPosition: (pos: LogicalPoint | WindowAnchor) => Promise<void>;
+  /** Keep the companion above other windows. */
+  setAlwaysOnTop: (on: boolean) => Promise<void>;
+  /** Temporarily toggle cursor pass-through over transparent pixels
+   *  (runtime-only). */
+  setClickThrough: (on: boolean) => void;
+  /** Observe the companion window moving (logical px). */
+  onMoved: (cb: (pos: LogicalPoint) => void) => () => void;
+  /** Observe the companion window resizing (logical px). */
+  onResized: (cb: (size: LogicalSizeLike) => void) => () => void;
 };
 
 export interface PluginContext {
@@ -314,6 +360,9 @@ export interface PluginContext {
     set: (key: string, value: unknown) => Promise<void>;
     remove: (key: string) => Promise<void>;
   };
+  /** Control of the companion window (position, size, behavior). Gated by
+   *  the `"window"` manifest permission — methods throw without it. */
+  readonly window: WindowSurface;
   /** Live avatar control (no-op outside the main window). */
   readonly avatar: AvatarSurface;
   /** Publish/consume capability providers (TTS, STT). */

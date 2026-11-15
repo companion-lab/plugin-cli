@@ -1,0 +1,103 @@
+# Publish companion-cli to npm + create the GitHub release.
+#
+# Primary flow: run "Prepare release" — it bumps package.json, commits, tags,
+# and calls this workflow to publish. If a new @companion-lab/plugin release
+# should be vendored first, run "Sync vendored SDK" and merge its PR.
+#
+# Manual flow: bump package.json, commit, then
+#
+#   git tag v0.4.0 && git push origin v0.4.0
+#
+# `workflow_dispatch` publishes the committed version without a tag (the
+# already-published guard still applies). Tag-push and prepare-release runs
+# create a GitHub release with generated notes.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  # Called by prepare-release.yml after the version bump commit; publish
+  # logic lives here so both paths share guards + publish steps.
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit to check out (Prepare release passes the bumped commit)"
+        required: false
+        type: string
+      tag:
+        description: "Tag name for the GitHub release (Prepare release passes v<version>)"
+        required: false
+        type: string
+      create_release:
+        description: "Create the GitHub release after publishing"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # npm provenance (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/check-pack.mjs
+
+      # Release-blocking smoke: scaffold + esbuild bundle against the vendored
+      # SDK copy + zip (the Rust backend path is covered by CI on main).
+      - name: Smoke build (frontend-only)
+        run: |
+          node bin/companion-cli.mjs init smoke-release --no-backend
+          node bin/companion-cli.mjs build smoke-release
+          test -f dist/smoke-release-0.1.0.zip
+
+      - name: Verify tag matches package version
+        if: github.event_name == 'push'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "${TAG#v}" != "$PKG_VERSION" ]; then
+            echo "::error::tag $TAG does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Verify version is not already published
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::error::$NAME@$VER is already published on npm"
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub release
+        if: github.event_name == 'push' || inputs.create_release == true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          generate_release_notes: true

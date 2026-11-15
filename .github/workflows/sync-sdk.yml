@@ -1,0 +1,66 @@
+# Vendor the JS SDK from companion-lab/companion-sdk-js into the copy this
+# package ships, then open a PR with the diff. Run this after releasing a new
+# @companion-lab/plugin (or when companion-sdk-js main has changes you want
+# to ship with the next CLI release), merge the PR, then tag the CLI release.
+#
+# Requires the vendored copy to stay identical to the source repo — run this
+# workflow instead of hand-editing sdk/js/@companion/plugin/*.
+
+name: Sync vendored SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_ref:
+        description: "companion-sdk-js ref to vendor (branch, tag, or commit)"
+        default: "main"
+
+permissions:
+  contents: write # push the sync branch
+  pull-requests: write # open the PR
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Vendor SDK files
+        id: sync
+        env:
+          SDK_REF: ${{ inputs.sdk_ref || 'main' }}
+        run: node scripts/sync-sdk.mjs "$SDK_REF"
+
+      # Prove the updated vendored copy still builds a plugin end to end.
+      - name: Smoke build against vendored SDK
+        run: |
+          node bin/companion-cli.mjs init smoke-sync --no-backend
+          node bin/companion-cli.mjs build smoke-sync
+          test -f dist/smoke-sync-0.1.0.zip
+
+      # Refs may contain "/" (e.g. feature/x) — flatten it for the PR branch.
+      - name: Compute PR branch name
+        env:
+          SDK_REF: ${{ inputs.sdk_ref || 'main' }}
+        run: echo "SDK_BRANCH=sync-sdk-$(echo "$SDK_REF" | tr '/' '-')" >> "$GITHUB_ENV"
+
+      - name: Open sync PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ${{ env.SDK_BRANCH }}
+          commit-message: "sync: vendor JS SDK from companion-sdk-js@${{ inputs.sdk_ref || 'main' }}"
+          title: "Sync vendored JS SDK (companion-sdk-js@${{ inputs.sdk_ref || 'main' }})"
+          body: |
+            Vendored `sdk/js/@companion/plugin/*` updated from
+            [companion-lab/companion-sdk-js@${{ inputs.sdk_ref || 'main' }}](https://github.com/companion-lab/companion-sdk-js/tree/${{ inputs.sdk_ref || 'main' }}).
+
+            Smoke build (scaffold + esbuild bundle + zip) passed against the
+            updated copy in the sync workflow run.

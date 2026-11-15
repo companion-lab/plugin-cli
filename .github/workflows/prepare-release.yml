@@ -1,0 +1,114 @@
+# One-click release for companion-cli:
+#
+#   Actions -> Prepare release -> run workflow
+#     version: "0.4.0"    (explicit target version, optional)
+#     bump:    patch      (used when version is empty; default)
+#
+# If a new @companion-lab/plugin release should be vendored, run the
+# "Sync vendored SDK" workflow first and merge its PR, then run this.
+#
+# Bumps package.json, commits "chore: release vX.Y.Z", tags v X.Y.Z, pushes
+# both, then calls the Release workflow against the bumped commit to publish
+# to npm and create the GitHub release. Tag/version mismatches are impossible
+# because the manifest is set from the requested version, not the other way.
+#
+# Note: tags pushed with GITHUB_TOKEN don't retrigger workflows, so publish
+# happens here via the reusable Release workflow (no double publish).
+
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target version, e.g. 0.4.0 (overrides bump)"
+        required: false
+        type: string
+      bump:
+        description: "Bump applied when no explicit version is given"
+        required: false
+        default: patch
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: write
+  id-token: write # the called Release workflow publishes with provenance
+
+concurrency:
+  group: prepare-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.push.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Bump package.json version
+        id: version
+        env:
+          VERSION_IN: ${{ inputs.version }}
+          BUMP: ${{ inputs.bump || 'patch' }}
+        run: |
+          if [ -n "$VERSION_IN" ]; then
+            node scripts/prepare-release.mjs --set "$VERSION_IN"
+          else
+            node scripts/prepare-release.mjs --bump "$BUMP"
+          fi
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Fail fast if version or tag already taken
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::$NAME@$VERSION is already published on npm"; exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "::error::tag v$VERSION already exists on origin"; exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      # Release-blocking smoke: scaffold + esbuild bundle against the vendored
+      # SDK copy + zip (the Rust backend path is covered by CI on main).
+      - name: Smoke build (frontend-only)
+        run: |
+          node bin/companion-cli.mjs init smoke-prep --no-backend
+          node bin/companion-cli.mjs build smoke-prep
+          test -f dist/smoke-prep-0.1.0.zip
+
+      - name: Commit, tag, and push
+        id: push
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore: release v$VERSION"
+          git push origin HEAD:"$GITHUB_REF_NAME"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+  publish:
+    needs: bump
+    uses: ./.github/workflows/release.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
+      tag: v${{ needs.bump.outputs.version }}
+      create_release: true
+    secrets: inherit

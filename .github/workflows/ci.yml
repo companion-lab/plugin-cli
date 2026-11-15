@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-frontend:
+    name: smoke (frontend-only, node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: CLI help exits cleanly
+        run: node bin/companion-cli.mjs --help > /dev/null
+      # Exercises scaffold -> esbuild bundle (against the vendored SDK copy) -> zip.
+      - name: Scaffold and build a frontend-only plugin
+        run: |
+          node bin/companion-cli.mjs init smoke-frontend --no-backend
+          node bin/companion-cli.mjs build smoke-frontend
+          test -f dist/smoke-frontend-0.1.0.zip
+      - name: Published file set sanity
+        run: node scripts/check-pack.mjs
+
+  smoke-backend:
+    name: smoke (Rust backend build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pnpm install --frozen-lockfile
+      # Full scaffold including the backend crate; the cargo build resolves
+      # companion-plugin-sdk from crates.io exactly like a real user's plugin.
+      - name: Scaffold and build a plugin with Rust backend
+        run: |
+          node bin/companion-cli.mjs init smoke-demo
+          node bin/companion-cli.mjs build smoke-demo
+          test -f dist/smoke-demo-0.1.0.zip
