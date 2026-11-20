@@ -80,16 +80,20 @@ jobs:
             exit 1
           fi
 
-      - name: Verify version is not already published
+      - name: Check if version is already published
+        id: published
         run: |
           NAME=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")
           if npm view "$NAME@$VER" version >/dev/null 2>&1; then
-            echo "::error::$NAME@$VER is already published on npm"
-            exit 1
+            echo "already published — skipping the publish step"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Publish to npm
+        if: steps.published.outputs.skip != 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
