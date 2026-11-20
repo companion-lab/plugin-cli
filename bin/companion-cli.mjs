@@ -44,7 +44,9 @@ build options:
   --no-backend     skip the Rust build even if backend/ exists
   --no-frontend    skip the JS bundle (backend-only plugin)
   --sdk <dir>      path to the plugin JS SDK
-                   (default: <repo>/sdk/js/@companion/plugin)
+                   (default: <repo>/sdk/js/@companion/plugin inside a
+                   companion-tauri checkout; otherwise the
+                   @companion-lab/plugin package installed with this CLI)
   -h, --help       show this help
 
 examples:
@@ -115,10 +117,19 @@ async function loadEsbuild() {
 
 function defaultSdkDir() {
   // Inside a companion-tauri checkout, build against the repo's live SDK;
-  // otherwise use the SDK shims bundled with this package (npm installs).
+  // otherwise resolve the @companion-lab/plugin package installed with this
+  // CLI (same target app/scripts/build-plugin.mjs falls back to).
   const checkoutSdk = path.join(repoRoot, "sdk", "js", "@companion", "plugin");
   if (existsSync(path.join(checkoutSdk, "index.ts"))) return checkoutSdk;
-  return path.join(cliRoot, "sdk", "js", "@companion", "plugin");
+  try {
+    return path.dirname(
+      createRequire(import.meta.url).resolve("@companion-lab/plugin"),
+    );
+  } catch {
+    throw new BuildError(
+      "plugin SDK not found: @companion-lab/plugin is not installed (run pnpm install in plugin-cli/, or install companion-cli from npm)",
+    );
+  }
 }
 
 async function runInit(rest, opts) {

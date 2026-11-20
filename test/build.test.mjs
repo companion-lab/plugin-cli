@@ -1,8 +1,10 @@
 // Build tests: manifest validation, staging decisions (frontend/backend/
-// assets), and a real esbuild bundle against the vendored SDK shims. Rust
-// builds (cargo spawn) are covered by the CI smoke workflow, not here.
+// assets), and a real esbuild bundle against the @companion-lab/plugin
+// package shims. Rust builds (cargo spawn) are covered by the CI smoke
+// workflow, not here.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createRequire } from "node:module";
 import {
   mkdirSync,
   mkdtempSync,
@@ -12,17 +14,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { buildPlugin, BuildError, FRONTEND_SRC_CANDIDATES } from "../lib/build.mjs";
 
-// The SDK shims vendored with this package — same target the build aliases to.
-const SDK_DIR = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "sdk",
-  "js",
-  "@companion",
-  "plugin",
+// The @companion-lab/plugin package — same target the build aliases to
+// (mirrors the CLI's defaultSdkDir npm fallback).
+const SDK_DIR = path.dirname(
+  createRequire(import.meta.url).resolve("@companion-lab/plugin"),
 );
 
 let work;

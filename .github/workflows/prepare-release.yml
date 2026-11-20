@@ -4,9 +4,6 @@
 #     version: "0.4.0"    (explicit target version, optional)
 #     bump:    patch      (used when version is empty; default)
 #
-# If a new @companion-lab/plugin release should be vendored, run the
-# "Sync vendored SDK" workflow first and merge its PR, then run this.
-#
 # Bumps package.json, commits "chore: release vX.Y.Z", tags v X.Y.Z, pushes
 # both, then calls the Release workflow against the bumped commit to publish
 # to npm and create the GitHub release. Tag/version mismatches are impossible
@@ -82,8 +79,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Release-blocking smoke: scaffold + esbuild bundle against the vendored
-      # SDK copy + zip (the Rust backend path is covered by CI on main).
+      # Release-blocking smoke: scaffold + esbuild bundle against the
+      # @companion-lab/plugin package + zip (the Rust backend path is covered by CI on main).
       - name: Smoke build (frontend-only)
         run: |
           node bin/companion-cli.mjs init smoke-prep --no-backend

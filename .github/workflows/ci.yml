@@ -29,7 +29,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: CLI help exits cleanly
         run: node bin/companion-cli.mjs --help > /dev/null
-      # Exercises scaffold -> esbuild bundle (against the vendored SDK copy) -> zip.
+      # Exercises scaffold -> esbuild bundle (against the @companion-lab/plugin package) -> zip.
       - name: Scaffold and build a frontend-only plugin
         run: |
           node bin/companion-cli.mjs init smoke-frontend --no-backend

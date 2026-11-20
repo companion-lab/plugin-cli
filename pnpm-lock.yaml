@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@companion-lab/plugin':
+        specifier: ^0.3.0
+        version: 0.3.0
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -20,6 +23,14 @@ importers:
         version: 5.1.0(vite@8.3.8(esbuild@0.28.2))
 
 packages:
+
+  '@companion-lab/plugin@0.3.0':
+    resolution: {integrity: sha512-YpDe49467WFVMsiOJsgmu34WiS99la+qXnorKuidQB2uqqVl9HtRqvfiToZkYR+8124nE/b63rIm4Ign29ElTw==}
+    peerDependencies:
+      react: '>=18.0.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@emnapi/core@2.0.0-beta.2':
     resolution: {integrity: sha512-MzCVoWtcg4Pm2B3je5mMvYMvj3MmBKw+fU7vbsJc9/iT8ip6/eYIHo/Dsm/mr+wsHB6SEyJDuxB09Yy6r/8+4A==}
@@ -594,6 +605,8 @@ packages:
     hasBin: true
 
 snapshots:
+
+  '@companion-lab/plugin@0.3.0': {}
 
   '@emnapi/core@2.0.0-beta.2':
     dependencies:

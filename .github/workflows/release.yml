@@ -1,8 +1,7 @@
 # Publish companion-cli to npm + create the GitHub release.
 #
 # Primary flow: run "Prepare release" — it bumps package.json, commits, tags,
-# and calls this workflow to publish. If a new @companion-lab/plugin release
-# should be vendored first, run "Sync vendored SDK" and merge its PR.
+# and calls this workflow to publish.
 #
 # Manual flow: bump package.json, commit, then
 #
@@ -62,8 +61,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/check-pack.mjs
 
-      # Release-blocking smoke: scaffold + esbuild bundle against the vendored
-      # SDK copy + zip (the Rust backend path is covered by CI on main).
+      # Release-blocking smoke: scaffold + esbuild bundle against the
+      # @companion-lab/plugin package + zip (the Rust backend path is covered by CI on main).
       - name: Smoke build (frontend-only)
         run: |
           node bin/companion-cli.mjs init smoke-release --no-backend

@@ -1,5 +1,5 @@
-// CI check: the published tarball must contain the CLI entry point, every
-// lib module, and the vendored SDK copy the build aliases against.
+// CI check: the published tarball must contain the CLI entry point and every
+// lib module.
 //
 //   node scripts/check-pack.mjs
 
@@ -19,9 +19,6 @@ const required = [
   "lib/build.mjs",
   "lib/scaffold.mjs",
   "lib/zip.mjs",
-  ...["index.ts", "jsx-runtime.js", "react.js", "react-dom.js"].map(
-    (f) => `sdk/js/@companion/plugin/${f}`,
-  ),
   "README.md",
   "LICENSE",
 ];

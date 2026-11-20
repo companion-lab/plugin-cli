@@ -39,7 +39,8 @@ companion-cli build my-plugin
 ```
 
 The frontend is bundled with esbuild (React is aliased to the host's copies
-via the bundled SDK shims — never bundled). The Rust backend is built with
+via the `@companion-lab/plugin` shims — never bundled). The Rust backend is
+built with
 `cargo build --release` whenever `backend/` and `manifest.backend` both
 exist; use `--no-backend` to skip it.
 
@@ -77,7 +78,7 @@ the [plugin format docs](https://github.com/companion-lab/companion-desktop/blob
 | `--flat` | Put `manifest.json` at the zip root instead of inside an `<id>/` folder. The importer accepts both layouts. |
 | `--no-backend` | Skip the Rust build even if `backend/` exists. |
 | `--no-frontend` | Skip the JS bundle (backend-only plugin). |
-| `--sdk <dir>` | Path to the plugin JS SDK. Defaults to the SDK shims bundled with this package; inside a companion-tauri checkout, the repo's own `sdk/js/@companion/plugin` is used. |
+| `--sdk <dir>` | Path to the plugin JS SDK. Defaults to the `@companion-lab/plugin` package installed with this CLI; inside a companion-tauri checkout, the repo's own `sdk/js/@companion/plugin` is used. |
 
 ### Zip layout
 
