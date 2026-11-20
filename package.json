@@ -4,6 +4,9 @@
   "description": "Scaffold, build, and package companion-tauri plugins (JS frontend + Rust backend) into an installable zip.",
   "type": "module",
   "license": "MIT",
+  "scripts": {
+    "test": "vitest run"
+  },
   "author": "Companion Lab",
   "bin": {
     "companion-cli": "bin/companion-cli.mjs"
@@ -37,5 +40,8 @@
   "dependencies": {
     "esbuild": "^0.28.2",
     "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
   }
 }
