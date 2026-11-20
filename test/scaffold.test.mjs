@@ -99,7 +99,7 @@ describe("scaffoldPlugin", () => {
     expect(manifest.name).toBe("My Voice");
     expect(manifest.frontend).toEqual({ entry: "frontend.js" });
     expect(manifest.backend).toEqual({ library: "libmy_voice_backend.dylib" });
-    expect(manifest.abi).toBe(2);
+    expect(manifest.abi).toBe(3);
   });
 
   it("derives Rust names from the id (dashes to underscores)", () => {
